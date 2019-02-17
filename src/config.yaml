@@ -1,0 +1,29 @@
+options:
+  radarr-user:
+    type: string
+    default: "radarr"
+    description: "The user and groups to install radarr under. These will be created automatically"
+  port:
+    type: int
+    default: 7878
+    description: "Port for radarr"
+  restore-config:
+    type: boolean
+    default: False
+    description: "Restore a previous configuration from resource"
+  proxy-port:
+    type: int
+    default: 443
+    description: "Port to request for reverse proxy access"
+  proxy-domain:
+    type: string
+    default: "radarr"
+    description: "Subdomain to request from reverse proxy"
+  proxy-url:
+    type: string
+    default: "/radarr"
+    description: 'Urlbase for revrse proxy, must start with a "/"'
+  proxy-group:
+    type: string
+    default: "radarr"
+    description: "The name of the backend this charm will use, this should be unique for deployment/reverseproxy. radarr is not designed to be run in HA with multiple units grouped"

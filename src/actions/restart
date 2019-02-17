@@ -1,0 +1,4 @@
+#!/bin/bash
+
+systemctl restart radarr.service
+juju-log -l "INFO" Radarr restarted

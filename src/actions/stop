@@ -1,0 +1,4 @@
+#!/bin/bash
+
+systemctl stop radarr.service
+juju-log -l "INFO" Radarr stopped

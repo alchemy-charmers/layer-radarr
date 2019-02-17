@@ -1,0 +1,24 @@
+name: radarr
+summary: Installs radarr
+maintainer: James Hebden <james@ec0.io> 
+description: |
+  Installs radarr with relations for registering downloaders and notifications
+tags:
+  # Replace "misc" with one or more whitelisted tags from this list:
+  # https://jujucharms.com/docs/stable/authors-charm-metadata
+  - misc
+subordinate: false
+series:
+ - bionic 
+resources:
+  radarrconfig:
+    type: file
+    filename: radarrconfig.zip
+    description: "Zip file of radarr backup to restore"
+requires:
+  usenet-downloader:
+    interface: usenet-downloader
+  plex-info:
+    interface: plex-info
+  reverseproxy:
+    interface: reverseproxy

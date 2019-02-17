@@ -1,0 +1,4 @@
+#!/bin/bash
+
+systemctl start radarr.service
+juju-log -l "INFO" Radarr started
