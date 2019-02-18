@@ -40,14 +40,21 @@ async def test_radarr_deploy(model, series):
     await model.deploy('{}/builds/radarr'.format(juju_repository),
                        series=series,
                        application_name='radarr-{}'.format(series))
-    assert True
+
+
+async def test_depoy_supporting_apps(model):
+    await model.deploy('cs:~chris.sanders/sabnzbd',
+                       series='xenial',
+                       application_name='sabnzbd')
+    await model.deploy('cs:~chris.sanders/plex',
+                       series='xenial',
+                       application_name='plex')
 
 
 async def test_radarr_status(apps, model):
     # Verifies status for all deployed series of the charm
     for app in apps:
         await model.block_until(lambda: app.status == 'active')
-    assert True
 
 
 async def test_disable_auth_action(units):
@@ -69,3 +76,31 @@ async def test_enable_indexers_action(units):
         action = await unit.run_action('enable-indexers')
         action = await action.wait()
         assert action.status == 'completed'
+
+
+async def test_plex_status(model):
+    # Verifies status for all deployed series of the charm
+    plex = model.applications['plex']
+    await model.block_until(lambda: plex.status == 'active')
+
+
+async def test_plex_relation(apps, model):
+    plex = model.applications['plex']
+    for app in apps:
+        await app.add_relation('plex-info', 'plex:plex-info')
+        # await model.block_until(lambda: plex.status == 'maintenance')
+        # await model.block_until(lambda: plex.status == 'active')
+
+
+async def test_sab_status(model):
+    # Verifies status for all deployed series of the charm
+    sab = model.applications['sab']
+    await model.block_until(lambda: sab.status == 'active')
+
+
+async def test_sab_relation(apps, model):
+    sab = model.applications['plex']
+    for app in apps:
+        await app.add_relation('usenet-downloader', 'sabnzbd:usenet-downloader')
+        # await model.block_until(lambda: sab.status == 'maintenance')
+        # await model.block_until(lambda: sab.status == 'active')
