@@ -84,8 +84,7 @@ async def test_plex_status(model):
     await model.block_until(lambda: plex.status == 'active')
 
 
-async def test_plex_relation(apps, model):
-    plex = model.applications['plex']
+async def test_plex_relation(apps):
     for app in apps:
         await app.add_relation('plex-info', 'plex:plex-info')
         # await model.block_until(lambda: plex.status == 'maintenance')
@@ -94,12 +93,11 @@ async def test_plex_relation(apps, model):
 
 async def test_sab_status(model):
     # Verifies status for all deployed series of the charm
-    sab = model.applications['sab']
+    sab = model.applications['sabnzbd']
     await model.block_until(lambda: sab.status == 'active')
 
 
-async def test_sab_relation(apps, model):
-    sab = model.applications['plex']
+async def test_sab_relation(apps):
     for app in apps:
         await app.add_relation('usenet-downloader', 'sabnzbd:usenet-downloader')
         # await model.block_until(lambda: sab.status == 'maintenance')
