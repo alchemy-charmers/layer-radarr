@@ -1,5 +1,6 @@
 includes:
   - 'layer:basic'
+  - 'layer:service-account'
   - 'layer:version'
   - 'layer:hostname'
   - 'layer:backup'
@@ -12,5 +13,12 @@ options:
     backup-method: "sync"
     backup-files: |-
       /home/{radarr-user}/.config/Radarr/Backups/scheduled
+  service-account:
+    users:
+      - 'radarr'
+    groups:
+      - 'radarr'
+    membership:
+      'radarr': ['radarr']
   version:
     file_name: "repo-info"

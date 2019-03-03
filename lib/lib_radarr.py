@@ -205,16 +205,7 @@ class RadarrHelper:
             return True
         return False
 
-    def create_user(self):
-        ''' Create service account '''
-        cmdline = "adduser --system --home /home/{0} --group {0}".format(
-            self.user)
-        os.system(cmdline)
-
     def install_radarr(self):
-
-        # ensure user exists
-        self.create_user()
 
         # make sure dependencies are installs
         self.install_deps()
