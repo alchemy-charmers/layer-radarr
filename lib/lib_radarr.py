@@ -8,7 +8,6 @@ from github import Github
 
 import fileinput
 import sqlite3
-import shutil
 import json
 import os
 
@@ -57,9 +56,8 @@ class RadarrHelper:
             if line.strip().startswith('<AuthenticationMethod>') and auth:
                 line = '  <AuthenticationMethod>{}</AuthenticationMethod>\n'.format(auth)
             print(line, end='')
-        shutil.chown(self.config_file,
-                     user=self.charm_config['radarr-user'],
-                     group=self.charm_config['radarr-user'])
+
+        self.configure_configdir()
         host.service_restart(self.service_name)
         hookenv.log('Radarr config modified', 'INFO')
 
@@ -185,7 +183,9 @@ class RadarrHelper:
             os.makedirs(self.config_dir)
         hookenv.log("Fixing data dir permissions: {}".format(
             self.config_dir), 'DEBUG')
-        host.chownr(self.installdir, self.user,
+        host.chownr(self.home_dir, self.user,
+                    self.user, chowntopdir=True)
+        host.chownr(self.config_dir, self.user,
                     self.user, chowntopdir=True)
 
     def update_radarr(self):

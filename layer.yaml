@@ -16,8 +16,12 @@ options:
   service-account:
     users:
       - 'radarr'
+    uidmap:
+      - 'radarr': '1001'
     groups:
       - 'radarr'
+    gidmap:
+      - 'radarr': '1001'
     membership:
       - 'radarr': ['radarr']
   version:
