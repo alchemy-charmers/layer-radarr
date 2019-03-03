@@ -19,6 +19,6 @@ options:
     groups:
       - 'radarr'
     membership:
-      'radarr': ['radarr']
+      - 'radarr': ['radarr']
   version:
     file_name: "repo-info"
