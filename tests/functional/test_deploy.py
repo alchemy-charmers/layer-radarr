@@ -1,45 +1,57 @@
 import os
 import pytest
-from juju.model import Model
+import subprocess
 
-# Treat tests as coroutines
+# Treat all tests as coroutines
 pytestmark = pytest.mark.asyncio
 
-series = ['xenial', 'bionic']
 juju_repository = os.getenv('JUJU_REPOSITORY', '.').rstrip('/')
+series = ['xenial',
+          'bionic',
+          pytest.param('cosmic', marks=pytest.mark.xfail(reason='canary')),
+          ]
+sources = [('local', '{}/builds/radarr'.format(juju_repository)),
+           ('jujucharms', 'cs:~pirate-charmers/radarr'),
+           ]
+
+
+# Uncomment for re-using the current model, useful for debugging functional tests
+# @pytest.fixture(scope='module')
+# async def model():
+#     from juju.model import Model
+#     model = Model()
+#     await model.connect_current()
+#     yield model
+#     await model.disconnect()
+
+
+# Custom fixtures
+@pytest.fixture(params=series)
+def series(request):
+    return request.param
+
+
+@pytest.fixture(params=sources, ids=[s[0] for s in sources])
+def source(request):
+    return request.param
 
 
 @pytest.fixture
-async def model():
-    model = Model()
-    await model.connect_current()
-    yield model
-    await model.disconnect()
+async def app(model, series, source):
+    app_name = 'radarr-{}-{}'.format(series, source[0])
+    return await model._wait_for_new('application', app_name)
 
 
-@pytest.fixture
-async def apps(model):
-    apps = []
-    for entry in series:
-        app = model.applications['radarr-{}'.format(entry)]
-        apps.append(app)
-    return apps
-
-
-@pytest.fixture
-async def units(apps):
-    units = []
-    for app in apps:
-        units.extend(app.units)
-    return units
-
-
-@pytest.mark.parametrize('series', series)
-async def test_radarr_deploy(model, series):
+async def test_radarr_deploy(model, series, source, request):
     # Starts a deploy for each series
-    await model.deploy('{}/builds/radarr'.format(juju_repository),
-                       series=series,
-                       application_name='radarr-{}'.format(series))
+    # Using subprocess b/c libjuju fails with JAAS
+    # https://github.com/juju/python-libjuju/issues/221
+    application_name = 'radarr-{}-{}'.format(series, source[0])
+    cmd = ['juju', 'deploy', source[1], '-m', model.info.name,
+           '--series', series, application_name]
+    if request.node.get_closest_marker('xfail'):
+        cmd.append('--force')
+    subprocess.check_call(cmd)
 
 
 async def test_depoy_supporting_apps(model):
@@ -51,31 +63,47 @@ async def test_depoy_supporting_apps(model):
                        application_name='plex')
 
 
-async def test_radarr_status(apps, model):
+async def test_charm_upgrade(model, app):
+    if app.name.endswith('local'):
+        pytest.skip("No need to upgrade the local deploy")
+    unit = app.units[0]
+    await model.block_until(lambda: unit.agent_status == 'idle')
+    subprocess.check_call(['juju',
+                           'upgrade-charm',
+                           '--switch={}'.format(sources[0][1]),
+                           '-m', model.info.name,
+                           app.name,
+                           ])
+    await model.block_until(lambda: unit.agent_status == 'executing')
+
+
+# Tests
+async def test_radarr_status(model, app):
     # Verifies status for all deployed series of the charm
-    for app in apps:
-        await model.block_until(lambda: app.status == 'active')
+    await model.block_until(lambda: app.status == 'active')
+    unit = app.units[0]
+    await model.block_until(lambda: unit.agent_status == 'idle')
 
 
-async def test_disable_auth_action(units):
-    for unit in units:
-        action = await unit.run_action('disable-auth')
-        action = await action.wait()
-        assert action.status == 'completed'
+async def test_disable_auth_action(app):
+    unit = app.units[0]
+    action = await unit.run_action('disable-auth')
+    action = await action.wait()
+    assert action.status == 'completed'
 
 
-async def test_disable_indexers_action(units):
-    for unit in units:
-        action = await unit.run_action('disable-indexers')
-        action = await action.wait()
-        assert action.status == 'completed'
+async def test_disable_indexers_action(app):
+    unit = app.units[0]
+    action = await unit.run_action('disable-indexers')
+    action = await action.wait()
+    assert action.status == 'completed'
 
 
-async def test_enable_indexers_action(units):
-    for unit in units:
-        action = await unit.run_action('enable-indexers')
-        action = await action.wait()
-        assert action.status == 'completed'
+async def test_enable_indexers_action(app):
+    unit = app.units[0]
+    action = await unit.run_action('enable-indexers')
+    action = await action.wait()
+    assert action.status == 'completed'
 
 
 async def test_plex_status(model):
@@ -84,11 +112,10 @@ async def test_plex_status(model):
     await model.block_until(lambda: plex.status == 'active')
 
 
-async def test_plex_relation(apps):
-    for app in apps:
-        await app.add_relation('plex-info', 'plex:plex-info')
-        # await model.block_until(lambda: plex.status == 'maintenance')
-        # await model.block_until(lambda: plex.status == 'active')
+async def test_plex_relation(app):
+    await app.add_relation('plex-info', 'plex:plex-info')
+    # await model.block_until(lambda: plex.status == 'maintenance')
+    # await model.block_until(lambda: plex.status == 'active')
 
 
 async def test_sab_status(model):
@@ -97,8 +124,7 @@ async def test_sab_status(model):
     await model.block_until(lambda: sab.status == 'active')
 
 
-async def test_sab_relation(apps):
-    for app in apps:
-        await app.add_relation('usenet-downloader', 'sabnzbd:usenet-downloader')
-        # await model.block_until(lambda: sab.status == 'maintenance')
-        # await model.block_until(lambda: sab.status == 'active')
+async def test_sab_relation(app):
+    await app.add_relation('usenet-downloader', 'sabnzbd:usenet-downloader')
+    # await model.block_until(lambda: sab.status == 'maintenance')
+    # await model.block_until(lambda: sab.status == 'active')
