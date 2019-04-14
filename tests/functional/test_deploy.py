@@ -7,22 +7,22 @@ pytestmark = pytest.mark.asyncio
 
 juju_repository = os.getenv('JUJU_REPOSITORY', '.').rstrip('/')
 series = ['xenial',
-          # 'bionic',
-          # pytest.param('cosmic', marks=pytest.mark.xfail(reason='canary')),
+          'bionic',
+          pytest.param('cosmic', marks=pytest.mark.xfail(reason='canary')),
           ]
 sources = [('local', '{}/builds/radarr'.format(juju_repository)),
-           # ('jujucharms', 'cs:~pirate-charmers/radarr'),
+           ('jujucharms', 'cs:~pirate-charmers/radarr'),
            ]
 
 
 # Uncomment for re-using the current model, useful for debugging functional tests
-@pytest.fixture(scope='module')
-async def model():
-    from juju.model import Model
-    model = Model()
-    await model.connect_current()
-    yield model
-    await model.disconnect()
+# @pytest.fixture(scope='module')
+# async def model():
+#     from juju.model import Model
+#     model = Model()
+#     await model.connect_current()
+#     yield model
+#     await model.disconnect()
 
 
 # Custom fixtures

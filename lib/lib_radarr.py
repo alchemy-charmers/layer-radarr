@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 from charmhelpers import fetch
 from charmhelpers.core import hookenv
-from charmhelpers.core import host  # adduser, service_start, service_stop, service_restart, chownr
+from charmhelpers.core import host
 from charmhelpers.core import templating
 from github import Github
 
@@ -28,7 +28,7 @@ class RadarrHelper:
         self.service_name = 'radarr.service'
         self.service_file = '/etc/systemd/system/' + self.service_name
         self.deps = [
-            'libmono-cil-dev',
+            'mono-complete',
             'curl',
             'mediainfo'
         ]
@@ -150,6 +150,9 @@ class RadarrHelper:
         host.service_start(self.service_name)
 
     def install_deps(self):
+        fetch.add_source("deb https://download.mono-project.com/repo/ubuntu stable-{series} main",
+                         key="3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF")
+        fetch.apt_update()
         fetch.apt_install(self.deps)
 
     def get_latest_release(self):
