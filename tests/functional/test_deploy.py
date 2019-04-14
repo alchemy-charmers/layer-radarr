@@ -7,22 +7,22 @@ pytestmark = pytest.mark.asyncio
 
 juju_repository = os.getenv('JUJU_REPOSITORY', '.').rstrip('/')
 series = ['xenial',
-          'bionic',
-          pytest.param('cosmic', marks=pytest.mark.xfail(reason='canary')),
+          # 'bionic',
+          # pytest.param('cosmic', marks=pytest.mark.xfail(reason='canary')),
           ]
 sources = [('local', '{}/builds/radarr'.format(juju_repository)),
-           ('jujucharms', 'cs:~pirate-charmers/radarr'),
+           # ('jujucharms', 'cs:~pirate-charmers/radarr'),
            ]
 
 
 # Uncomment for re-using the current model, useful for debugging functional tests
-# @pytest.fixture(scope='module')
-# async def model():
-#     from juju.model import Model
-#     model = Model()
-#     await model.connect_current()
-#     yield model
-#     await model.disconnect()
+@pytest.fixture(scope='module')
+async def model():
+    from juju.model import Model
+    model = Model()
+    await model.connect_current()
+    yield model
+    await model.disconnect()
 
 
 # Custom fixtures
@@ -86,6 +86,12 @@ async def test_radarr_status(model, app):
     await model.block_until(lambda: app.status == 'active')
     unit = app.units[0]
     await model.block_until(lambda: unit.agent_status == 'idle')
+
+
+async def test_mono_version(app, jujutools):
+    unit = app.units[0]
+    compare = await jujutools.compare_version('mono-runtime', '5.0.0', unit)
+    assert compare == 1  # 1 means the package is newer than the compared version
 
 
 async def test_disable_auth_action(app):

@@ -10,37 +10,6 @@ class JujuTools:
         self.controller = controller
         self.model = model
 
-    # async def get_app(self, name):
-    #     '''Returns the application requested'''
-    #     app = None
-    #     try:
-    #         app = self.model.applications[name]
-    #     except KeyError:
-    #         raise JujuError("Cannot find application {}".format(name))
-    #     return app
-
-    # async def get_unit(self, name):
-    #     '''Returns the requested <app_name>/<unit_number> unit'''
-    #     unit = None
-    #     try:
-    #         (app_name, unit_number) = name.split('/')
-    #         unit = self.model.applications[app_name].units[unit_number]
-    #     except (KeyError, ValueError):
-    #         raise JujuError("Cannot find unit {}".format(name))
-    #     return unit
-
-    # async def get_entity(self, name):
-    #     '''Returns a unit or an application'''
-    #     entity = None
-    #     try:
-    #         entity = await self.get_unit(name)
-    #     except JujuError:
-    #         try:
-    #             entity = await self.get_app(name)
-    #         except JujuError:
-    #             raise JujuError("Cannot find entity {}".format(name))
-    #     return entity
-
     async def run_command(self, cmd, target):
         '''
         Runs a command on a unit.
@@ -97,3 +66,22 @@ class JujuTools:
         cmd = 'cat {}'.format(path)
         result = await self.run_command(cmd, target)
         return result['Stdout']
+
+    async def compare_version(self, package, version, target):
+        '''
+        Compares the version of the specified package on the target to the
+        provided version string.
+        '''
+        python3 = "python3 -c '{}'"
+        python_cmd = ('import apt;'
+                      'cache = apt.Cache();'
+                      'cache.update();'
+                      'cache.open();'
+                      'pkg = cache["{}"];'
+                      'print(apt.apt_pkg.version_compare(pkg.versions[0].version, "{}"), end="")'
+                      .format(package, version))
+        cmd = python3.format(python_cmd)
+        print("Running command: {}".format(cmd))
+        print("Command target: {}".format(target))
+        results = await self.run_command(cmd, target)
+        return int(results['Stdout'])
