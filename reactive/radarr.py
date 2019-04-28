@@ -1,4 +1,4 @@
-from charms.reactive import when_all, when_not, set_state
+from charms.reactive import when_all, when_not, set_state, hook
 from charmhelpers.core import host
 from charmhelpers.core import hookenv
 from pathlib import Path
@@ -10,6 +10,12 @@ import time
 import socket
 
 radarr = RadarrHelper()
+
+
+@hook('upgrade-charm')
+def hanlde_upgrade():
+    if not radarr.kv.get('mono-source'):
+        radarr.install_deps()
 
 
 @when_not('radarr.installed')
