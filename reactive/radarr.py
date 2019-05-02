@@ -19,7 +19,7 @@ radarr = RadarrHelper()
 
 
 @hook('upgrade-charm')
-def hanlde_upgrade():
+def handle_upgrade():
     if not radarr.kv.get('mono-source'):
         radarr.install_deps()
 
@@ -28,6 +28,8 @@ def hanlde_upgrade():
 @when_not('radarr.installed')
 def install_radarr():
     hookenv.status_set('maintenance', 'Installing Radarr')
+    if not radarr.kv.get('mono-source'):
+        radarr.install_deps()
     radarr.install_radarr()
     hookenv.status_set('maintenance', 'Installed')
     set_state('radarr.installed')
