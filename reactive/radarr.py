@@ -1,4 +1,10 @@
-from charms.reactive import when_all, when_not, set_state, hook
+from charms.reactive import (
+    when_all,
+    when_not,
+    set_state,
+    hook
+)
+
 from charmhelpers.core import host
 from charmhelpers.core import hookenv
 from pathlib import Path
@@ -13,20 +19,25 @@ radarr = RadarrHelper()
 
 
 @hook('upgrade-charm')
-def hanlde_upgrade():
+def handle_upgrade():
     if not radarr.kv.get('mono-source'):
         radarr.install_deps()
 
 
+@when_all('layer-service-account.configured')
 @when_not('radarr.installed')
 def install_radarr():
     hookenv.status_set('maintenance', 'Installing Radarr')
+    if not radarr.kv.get('mono-source'):
+        radarr.install_deps()
     radarr.install_radarr()
     hookenv.status_set('maintenance', 'Installed')
     set_state('radarr.installed')
 
 
-@when_all('radarr.installed', 'layer-hostname.installed')
+@when_all('radarr.installed',
+          'layer-service-account.configured',
+          'layer-hostname.installed')
 @when_not('radarr.configured')
 def setup_config():
     hookenv.status_set('maintenance', 'Configuring Radarr')

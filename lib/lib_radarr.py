@@ -8,10 +8,7 @@ from github import Github
 
 import fileinput
 import sqlite3
-import shutil
 import json
-import pwd
-import grp
 import os
 
 
@@ -45,6 +42,7 @@ class RadarrHelper:
         urlbase: The value to use for the urlbase, if not specified will leave unmodified
                  Default urlbase is an empty string, passing a string of 'None' will set an empty string
         '''
+        self.configure_configdir()
         for line in fileinput.input(self.config_file, inplace=True):
             if line.strip().startswith('<Port>') and port:
                 line = '  <Port>{}</Port>\n'.format(port)
@@ -58,9 +56,8 @@ class RadarrHelper:
             if line.strip().startswith('<AuthenticationMethod>') and auth:
                 line = '  <AuthenticationMethod>{}</AuthenticationMethod>\n'.format(auth)
             print(line, end='')
-        shutil.chown(self.config_file,
-                     user=self.charm_config['radarr-user'],
-                     group=self.charm_config['radarr-user'])
+
+        self.configure_configdir()
         host.service_restart(self.service_name)
         hookenv.log('Radarr config modified', 'INFO')
 
@@ -75,8 +72,7 @@ class RadarrHelper:
         else:
             c.execute('''UPDATE Indexers SET EnableRss = 0, EnableSearch = 0''')
         conn.commit()
-        host.chownr(self.home_dir, owner=self.charm_config['radarr-user'],
-                    group=self.charm_config['radarr-user'])
+        self.configure_configdir()
 
     def setup_systemd(self):
         context = {'user': self.user,
@@ -176,21 +172,35 @@ class RadarrHelper:
         ''' Create and fix permissions on install dir'''
         if not os.path.exists(self.installdir):
             os.makedirs(self.installdir)
-        uid = pwd.getpwnam(self.user).pw_uid
-        gid = grp.getgrnam(self.user).gr_gid
-        for root, dirnames, filenames in os.walk(self.installdir):
-            os.chown(root, uid, gid)
-            hookenv.log("Fixing data dir permissions: {}".format(
-                root), 'DEBUG')
-            for dirname in dirnames:
-                os.chown(os.path.join(root, dirname), uid, gid)
-            for filename in filenames:
-                os.chown(os.path.join(root, filename), uid, gid)
+        hookenv.log("Fixing data dir permissions: {}".format(
+            self.installdir), 'DEBUG')
+        if host.user_exists(self.user) and host.group_exists(self.user):
+            host.chownr(self.installdir, self.user,
+                        self.user, chowntopdir=True)
+        else:
+            hookenv.log("Skipping chown because user/group {} is missing".format(
+                self.installdir), 'DEBUG')
+
+    def configure_configdir(self):
+        ''' Create and fix permissions on install dir'''
+        if not os.path.exists(self.config_dir):
+            os.makedirs(self.config_dir)
+        hookenv.log("Fixing data dir permissions: {}".format(
+            self.config_dir), 'DEBUG')
+        if host.user_exists(self.user) and host.group_exists(self.user):
+            host.chownr(self.home_dir, self.user,
+                        self.user, chowntopdir=True)
+            host.chownr(self.config_dir, self.user,
+                        self.user, chowntopdir=True)
+        else:
+            hookenv.log("Skipping chown because user/group {} is missing".format(
+                self.installdir), 'DEBUG')
 
     def update_radarr(self):
         ''' Unpacks downloaded Radarr build '''
         # recursive chown and make directory
         self.configure_installdir()
+        self.configure_configdir()
 
         # do the download and unpack
         url = self.get_latest_release()
@@ -205,22 +215,10 @@ class RadarrHelper:
             return True
         return False
 
-    def create_user(self):
-        ''' Create service account '''
-        cmdline = "adduser --system --home /home/{0} --group {0}".format(
-            self.user)
-        os.system(cmdline)
-
     def install_radarr(self):
-
-        # ensure user exists
-        self.create_user()
 
         # make sure dependencies are installs
         self.install_deps()
-
-        # make install dir if it doesn't exist
-        self.configure_installdir()
 
         # download and unpack latest tarball
         self.update_radarr()
