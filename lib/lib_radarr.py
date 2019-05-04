@@ -174,8 +174,12 @@ class RadarrHelper:
             os.makedirs(self.installdir)
         hookenv.log("Fixing data dir permissions: {}".format(
             self.installdir), 'DEBUG')
-        host.chownr(self.installdir, self.user,
-                    self.user, chowntopdir=True)
+        if host.user_exists(self.user) and host.group_exists(self.user):
+            host.chownr(self.installdir, self.user,
+                        self.user, chowntopdir=True)
+        else:
+            hookenv.log("Skipping chown because user/group {} is missing".format(
+                self.installdir), 'DEBUG')
 
     def configure_configdir(self):
         ''' Create and fix permissions on install dir'''
@@ -183,10 +187,14 @@ class RadarrHelper:
             os.makedirs(self.config_dir)
         hookenv.log("Fixing data dir permissions: {}".format(
             self.config_dir), 'DEBUG')
-        host.chownr(self.home_dir, self.user,
-                    self.user, chowntopdir=True)
-        host.chownr(self.config_dir, self.user,
-                    self.user, chowntopdir=True)
+        if host.user_exists(self.user) and host.group_exists(self.user):
+            host.chownr(self.home_dir, self.user,
+                        self.user, chowntopdir=True)
+            host.chownr(self.config_dir, self.user,
+                        self.user, chowntopdir=True)
+        else:
+            hookenv.log("Skipping chown because user/group {} is missing".format(
+                self.installdir), 'DEBUG')
 
     def update_radarr(self):
         ''' Unpacks downloaded Radarr build '''
